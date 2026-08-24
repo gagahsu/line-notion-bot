@@ -1,0 +1,14 @@
+name = "line-notion-bot"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+
+[vars]
+# 非機密設定放這裡。模型可自行替換成其他 OpenRouter 免費模型。
+AI_MODELS = ["meta-llama/llama-4-maverick:free", "meta-llama/llama-4-scout:free", "openrouter/free"]
+
+# 以下四個是機密，不要寫在這個檔案裡，用 wrangler secret put 設定：
+#   LINE_CHANNEL_SECRET
+#   LINE_CHANNEL_ACCESS_TOKEN
+#   OPENROUTER_API_KEY
+#   NOTION_TOKEN
+#   NOTION_DATABASE_ID
