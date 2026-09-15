@@ -112,6 +112,7 @@ cd line-notion-bot
 wrangler secret put LINE_CHANNEL_SECRET
 wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
 wrangler secret put OPENROUTER_API_KEY
+wrangler secret put MISTRAL_API_KEY  # 選填，有設定的話 AI 分類會優先打 Mistral，失敗才退回 OpenRouter
 wrangler secret put JINA_API_KEY
 wrangler secret put NOTION_TOKEN
 wrangler secret put NOTION_DATABASE_ID
@@ -152,7 +153,8 @@ LINE Official Account Manager →「圖文選單」→ 建立，六格動作類�
 | `AI_MODELS` | `[vars]`（非機密） | OpenRouter fallback 模型陣列，上限 3 個 |
 | `LINE_CHANNEL_SECRET` | secret | LINE webhook 簽章驗證用 |
 | `LINE_CHANNEL_ACCESS_TOKEN` | secret | LINE Reply / 輸入動畫 API 用 |
-| `OPENROUTER_API_KEY` | secret | AI 分類 |
+| `OPENROUTER_API_KEY` | secret | AI 分類（fallback，Mistral 沒設定或失敗時使用） |
+| `MISTRAL_API_KEY` | secret（選填） | AI 分類，設定後優先使用（`mistral-medium-latest`） |
 | `JINA_API_KEY` | secret | 網頁內文抓取，未設定則退化為共用限流 |
 | `NOTION_TOKEN` | secret | Notion Personal Access Token |
 | `NOTION_DATABASE_ID` | secret | 目標資料庫 ID |

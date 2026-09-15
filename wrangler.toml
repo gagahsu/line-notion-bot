@@ -6,9 +6,10 @@ compatibility_date = "2026-08-01"
 # 非機密設定放這裡。模型可自行替換成其他 OpenRouter 免費模型。
 AI_MODELS = ["meta-llama/llama-4-maverick:free", "meta-llama/llama-4-scout:free", "openrouter/free"]
 
-# 以下四個是機密，不要寫在這個檔案裡，用 wrangler secret put 設定：
+# 以下是機密，不要寫在這個檔案裡，用 wrangler secret put 設定：
 #   LINE_CHANNEL_SECRET
 #   LINE_CHANNEL_ACCESS_TOKEN
 #   OPENROUTER_API_KEY
+#   MISTRAL_API_KEY（選填，設定後 AI 分類優先打 Mistral，失敗才退回上面的 OpenRouter 陣列）
 #   NOTION_TOKEN
 #   NOTION_DATABASE_ID

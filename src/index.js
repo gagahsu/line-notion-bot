@@ -611,6 +611,68 @@ async function getExistingTags(env, sampleSize = 100) {
   }
 }
 
+// 有設定 MISTRAL_API_KEY 就優先打自己的 Mistral 帳號（免費額度），失敗（含未設定 Key）才退回 OpenRouter 的免費模型陣列。
+// Mistral 官方 API 不支援 OpenRouter 那種多模型 fallback 陣列，所以這裡分成兩個獨立的呼叫函式。
+async function callAI(env, system, user) {
+  if (env.MISTRAL_API_KEY) {
+    try {
+      return await callMistral(env, system, user);
+    } catch {
+      // 掉回 OpenRouter，不中斷整個分類流程
+    }
+  }
+  return await callOpenRouter(env, system, user);
+}
+
+async function callMistral(env, system, user) {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.MISTRAL_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'mistral-medium-latest',
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Mistral 分類失敗（${res.status}）`);
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
+async function callOpenRouter(env, system, user) {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      models: env.AI_MODELS,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      temperature: 0.2,
+    }),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`AI 分類失敗（${res.status}）${detail.slice(0, 120)}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
 async function classify(env, { url, content, userNote, existingTags }) {
   const system = [
     '你是一個個人知識庫的分類助手。',
@@ -638,29 +700,7 @@ async function classify(env, { url, content, userNote, existingTags }) {
     .filter((l) => l !== null)
     .join('\n');
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      models: env.AI_MODELS,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: user },
-      ],
-      temperature: 0.2,
-    }),
-  });
-
-  if (!res.ok) {
-    const detail = await res.text();
-    throw new Error(`AI 分類失敗（${res.status}）${detail.slice(0, 120)}`);
-  }
-
-  const data = await res.json();
-  const raw = data.choices?.[0]?.message?.content ?? '';
+  const raw = await callAI(env, system, user);
   const cleaned = raw
     .replace(/```json/gi, '')
     .replace(/```/g, '')

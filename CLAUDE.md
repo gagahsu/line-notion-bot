@@ -46,7 +46,8 @@ LINE webhook (POST /)
 
 - **`createNotionPage` 會先查重**：寫入前呼叫 `findPageByUrl`（跟 `resolvePageId` 邏輯重複但獨立實作，因為輸入只會是原始網址不是 Notion 連結，未來如果要重構可以合併）。查到既有頁面就 PATCH 更新 properties + 額外 append 一段「（重新分類更新）」的 block，查不到才 POST 新建。回傳值是 `{ url, updated }` 物件，不是純字串，呼叫端要注意。
 
-- **AI 呼叫用 `models` 陣列而非 `model` 字串**：OpenRouter 的 fallback 機制，見 `wrangler.toml` 的 `AI_MODELS`。**硬限制是最多 3 個**，超過會 400（`'models' array must have 3 items or fewer.`）。免費模型常無預警下架，陣列最後一個固定放 `openrouter/free`（自動選型）當保底。
+- **AI 分類呼叫分兩層：Mistral 直連優先，OpenRouter 陣列保底**（`callAI`／`callMistral`／`callOpenRouter`，`src/index.js` 分類區塊）。有設定 `MISTRAL_API_KEY` 就先打 Mistral 官方 API（`model: 'mistral-medium-latest'`，用自己帳號的免費額度），失敗（含未設定 Key）才退回 OpenRouter。這是因為免費 Llama 模型偶爾會不照指示輸出 JSON，回傳類似安全審查標記的字串（例如 `User Safety: safe`）導致三層 JSON 解析全失敗，換成 Mistral 能大幅降低這個機率。
+- **OpenRouter 那層呼叫用 `models` 陣列而非 `model` 字串**：OpenRouter 的 fallback 機制，見 `wrangler.toml` 的 `AI_MODELS`。**硬限制是最多 3 個**，超過會 400（`'models' array must have 3 items or fewer.`）。免費模型常無預警下架，陣列最後一個固定放 `openrouter/free`（自動選型）當保底。Mistral 官方 API 不支援這種多模型 fallback 陣列，所以只能用一個 `model` 字串，且獨立於 OpenRouter 陣列之外。
 
 - **`classify` 的 JSON 解析有三層容錯**：直接 parse → 去除 markdown fence 後 parse → 正則抓 `{...}` 片段 parse → 全部失敗就把 AI 原始回應片段（前 300 字）塞進錯誤訊息裡回給使用者，方便不查 log 也能診斷。改這段時保留這個「失敗也要給診斷資訊」的原則。
 
